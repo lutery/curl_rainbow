@@ -15,6 +15,14 @@ import torch
 
 
 class Env():
+  '''
+  1. 设置了环境的随机种子
+  2. 设置了最大每个episode的帧数
+  3. 设置了重复动作的概率为0
+  4. 设置了帧跳过为0
+  5. 设置了颜色平均为False,保留原始帧颜色,color_averaging的功能看md文件
+  6. 使用了多帧堆叠，初始帧是0进行堆叠
+  '''
   def __init__(self, args):
     self.device = args.device
     self.ale = atari_py.ALEInterface()

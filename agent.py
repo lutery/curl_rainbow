@@ -21,6 +21,9 @@ random_shift = nn.Sequential(aug.RandomCrop((80, 80)), nn.ReplicationPad2d(4), a
 aug = random_shift
 
 class Agent():
+  '''
+  代理器：包括环境和模型
+  '''
   def __init__(self, args, env):
     self.args = args
     self.action_space = env.action_space()

@@ -112,8 +112,8 @@ def save_memory(memory, memory_path, disable_bzip):
 
 # Environment
 env = Env(args)
-env.train()
-action_space = env.action_space()
+env.train() # 设置训练标识
+action_space = env.action_space() # 获取动作空间大小
 
 # Agent
 dqn = Agent(args, env)
