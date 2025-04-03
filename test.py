@@ -19,6 +19,16 @@ from env import Env
 
 # Test DQN
 def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
+  '''
+  param args: 训练参数
+  param T: todo
+  param dqn: 神经网络
+  param val_mem： 验证缓冲区，里面已经有了部分数据
+  param metrics: 采集数据
+  param results_dir； todo
+  param evaluate: 是否是验证模式
+  
+  '''
   env = Env(args)
   env.eval()
   metrics['steps'].append(T)

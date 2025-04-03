@@ -18,13 +18,30 @@ blank_trans = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0, Fal
 
 
 # Segment tree data structure where parent node values are sum/max of children node values
+'''
+这行注释的作用是解释 **Segment Tree** 数据结构的功能：
+
+- **Segment Tree** 是一种树形数据结构，其中每个父节点的值是其子节点值的 **和** 或 **最大值**。
+- 在这个代码中，Segment Tree 被用来高效地存储和查询优先级经验回放中的样本优先级（如 TD-Error）。
+- **用途**：
+  - **快速更新**：当某个样本的优先级发生变化时，可以高效地更新树结构。
+  - **快速查询**：可以在对数时间复杂度内找到满足条件的样本（如按优先级比例采样）。
+
+这使得它非常适合用于实现 **优先经验回放（Prioritized Experience Replay, PER）**。
+'''
 class SegmentTree():
   def __init__(self, size):
+    '''
+    param size: 容量
+    '''
     self.index = 0
     self.size = size
     self.full = False  # Used to track actual capacity
+    # 构建了一个尺寸是2倍容量的树
     self.sum_tree = np.zeros((2 * size - 1, ), dtype=np.float32)  # Initialise fixed size tree with all (priority) zeros
+    # todo 这个事什么？
     self.data = np.array([None] * size)  # Wrap-around cyclic buffer
+    # todo 这个是什么？
     self.max = 1  # Initial max value to return (1 = 1^ω)
 
   # Propagates value up tree given a tree index
@@ -74,13 +91,15 @@ class SegmentTree():
 class ReplayMemory():
   def __init__(self, args, capacity):
     self.device = args.device
-    self.capacity = capacity
-    self.history = args.history_length
-    self.discount = args.discount
-    self.n = args.multi_step
+    self.capacity = capacity # 缓冲区容量
+    self.history = args.history_length # 帧堆叠 todo
+    self.discount = args.discount # 好像是奖励折扣值
+    self.n = args.multi_step # 多步DQN的折扣值
+    # 优先级重放缓冲区
     self.priority_weight = args.priority_weight  # Initial importance sampling weight β, annealed to 1 over course of training
     self.priority_exponent = args.priority_exponent
     self.t = 0  # Internal episode timestep counter
+    # 用这个存储优先级貌似 todo
     self.transitions = SegmentTree(capacity)  # Store transitions in a wrap-around cyclic buffer within a sum tree for querying priorities
 
   # Adds state and action at time t, reward and terminal at time t + 1

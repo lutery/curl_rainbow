@@ -55,17 +55,25 @@ class Agent():
         raise FileNotFoundError(args.model)
 
     self.online_net.train()
+    # 将 online_net的参数同步给 momentum_net
+    # 在initialize_momentum_net方法里面讲momentum_net参数设置为requires_grad=False，但是外面又设置为momentum_net为true，这两个操作互相矛盾吧
+    # 答：它们并不冲突。调用momentum_net.train()只是让网络的BN或Dropout等层以“训练”模式工作，而param_k.requires_grad=False则确保它的权重不通过反向传播更新。这样可以在保持某些层“训练”行为的同时，通过手动方式（而非梯度）来更新这些参数。
+    # **Answer**  在训练模式下，BatchNorm 会使用当前批次的数据来计算均值和方差并更新运行统计量，Dropout 会随机屏蔽部分神经元以防止过拟合。切换到评估模式后，BatchNorm 使用之前保存的均值和方差，Dropout 不再随机屏蔽任何神经元，从而保证输出结果的稳定性。
     self.initialize_momentum_net()
-    self.momentum_net.train()
+    self.momentum_net.train() # 从这里来看，momentum_net应该算是一个目标网络TargetNet吧？todo
 
+    # 这里创建了一个目标网络，那么momentum_net不是目标网络吗？momentum_net的作用是什么？todo
     self.target_net = DQN(args, self.action_space).to(device=args.device)
-    self.update_target_net()
-    self.target_net.train()
+    self.update_target_net() # 同步online_net到target_net
+    self.target_net.train() # 设置为训练模式 todo targetNet是训练？todo和我的代码不一样
+    # targetnet同样也是设置为训练模式不参与梯度计算
     for param in self.target_net.parameters():
       param.requires_grad = False
 
+    # 再次确认momentum_net不参与梯度计算
     for param in self.momentum_net.parameters():
       param.requires_grad = False
+    # 优化器仅优化onlone_net
     self.optimiser = optim.Adam(self.online_net.parameters(), lr=args.learning_rate, eps=args.adam_eps)
 
   # Resets noisy weights in all linear layers (of online net only)
