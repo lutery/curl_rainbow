@@ -27,20 +27,22 @@ class Agent():
   def __init__(self, args, env):
     self.args = args
     self.action_space = env.action_space()
-    self.atoms = args.atoms
-    self.Vmin = args.V_min
-    self.Vmax = args.V_max
+    self.atoms = args.atoms # 分布dqn
+    self.Vmin = args.V_min # 分布dqn
+    self.Vmax = args.V_max # 分布dqn
     self.support = torch.linspace(args.V_min, args.V_max, self.atoms).to(device=args.device)  # Support (range) of z
-    self.delta_z = (args.V_max - args.V_min) / (self.atoms - 1)
-    self.batch_size = args.batch_size
-    self.n = args.multi_step
-    self.discount = args.discount
+    self.delta_z = (args.V_max - args.V_min) / (self.atoms - 1) # 分布dqn
+    self.batch_size = args.batch_size # 批量大小
+    self.n = args.multi_step # n步分布dqn
+    self.discount = args.discount # 折扣因子
     self.norm_clip = args.norm_clip
-    self.coeff = 0.01 if args.game in ['pong', 'boxing', 'private_eye', 'freeway'] else 1.
+    self.coeff = 0.01 if args.game in ['pong', 'boxing', 'private_eye', 'freeway'] else 1. # 系数 todo 作用
 
+    # 构建了两个相同的网络，todo 作用是什么？
     self.online_net = DQN(args, self.action_space).to(device=args.device)
     self.momentum_net = DQN(args, self.action_space).to(device=args.device)
     if args.model:  # Load pretrained model if provided
+      # 加载预训练模型，这里可能是原作者自己的关系需要实现这种映射新的键值名
       if os.path.isfile(args.model):
         state_dict = torch.load(args.model, map_location='cpu')  # Always load tensors onto CPU by default, will shift to GPU if necessary
         if 'conv1.weight' in state_dict.keys():
