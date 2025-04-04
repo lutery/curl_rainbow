@@ -212,44 +212,66 @@ else:
   # Training loop
   dqn.train()
   T, done = 0, True
+  # 一直训练知道最大的训练步数
+  # 不断的收集数据，训练->
   for T in trange(1, args.T_max + 1):
     if done:
+      # 如果游戏结束了则reset
       state, done = env.reset(), False
 
     if T % args.replay_frequency == 0:
+      # 这里保持的时和lear一致的频率
+      # 目的是为了模型每次更新时，都能进行探索，从而保持一个平滑、稳定的探索
+      # 如果不这样做，模型可能会在某些状态下过拟合，导致探索不足，且可能会干扰
+      # 到模型学习的稳定性，因为突然加入的噪声可能会导致模型受到干扰
+      # 从而出现震荡，需要重新适应，好不容易适应了的模型又被打乱了
       dqn.reset_noise()  # Draw a new set of noisy weights
 
+    # 预测动作
     action = dqn.act(state)  # Choose an action greedily (with noisy weights)
+    # 执行动作
     next_state, reward, done = env.step(action)  # Step
     if args.reward_clip > 0:
+      # 奖励剪切
       reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
+    # 保存到缓冲区
     mem.append(state, action, reward, done)  # Append transition to memory
 
     # Train and test
+    # 限制模型的起始训练步数
+    # 这里的意思是说在训练开始前，模型会先收集一段数据，然后再开始训练
     if T >= args.learn_start:
+      # 这里是在更新优先级重访缓冲区的权重吧
       mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
 
       if T % args.replay_frequency == 0:
+        # 训练模型
         #for _ in range(4):
         dqn.learn(mem)  # Train with n-step distributional double-Q learning
+        # 将训练后的online_net更新到momentum net上，也和targetnet差不多是权重更新
+        # 不过频率时每次巡礼之后，权重权重时0.0001
         dqn.update_momentum_net() # MoCo momentum upate
 
       if T % args.evaluation_interval == 0:
+        # 进去验证模式，但是val_mem这里有啥用？又不更细，时进行对比？
         dqn.eval()  # Set DQN (online network) to evaluation mode
         avg_reward, avg_Q = test(args, T, dqn, val_mem, metrics, results_dir)  # Test
         log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
         dqn.train()  # Set DQN (online network) back to training mode
 
         # If memory path provided, save it
+        # 保存缓冲区
         if args.memory is not None:
           save_memory(mem, args.memory, args.disable_bzip_memory)
 
       # Update target network
+      # 更新online_net的目标网络，
       if T % args.target_update == 0:
         dqn.update_target_net()
 
       # Checkpoint the network
       if (args.checkpoint_interval != 0) and (T % args.checkpoint_interval == 0):
+        # 保存模型
         dqn.save(results_dir, 'checkpoint.pth')
 
     state = next_state

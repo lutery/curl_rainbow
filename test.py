@@ -21,7 +21,7 @@ from env import Env
 def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
   '''
   param args: 训练参数
-  param T: todo
+  param T: 总验证步数
   param dqn: 神经网络
   param val_mem： 验证缓冲区，里面已经有了部分数据
   param metrics: 采集数据
@@ -30,8 +30,9 @@ def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
   
   '''
   env = Env(args)
-  env.eval()
+  env.eval() # 这里仅仅只是将环境的训练标识改为False
   metrics['steps'].append(T)
+  # T_rewards记录每个episode的总奖励
   T_rewards, T_Qs = [], []
 
   # Test performance over several episodes
@@ -41,6 +42,7 @@ def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
       if done:
         state, reward_sum, done = env.reset(), 0, False
 
+      # 选择一个动作，这里还是使用了ε-greedy策略，也就是有一定的概率是随机选择动作
       action = dqn.act_e_greedy(state)  # Choose an action ε-greedily
       state, reward, done = env.step(action)  # Step
       reward_sum += reward
@@ -53,10 +55,15 @@ def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
   env.close()
 
   # Test Q-values over validation memory
+  # 计算一开始的val_mem的每个状态下的Q值
+  # 感觉这里是为了保持训练和验证时的接口一致才传入了一个随机的采集数据
   for state in val_mem:  # Iterate over valid states
     T_Qs.append(dqn.evaluate_q(state))
 
+  # 平均奖励和平均Q值
   avg_reward, avg_Q = sum(T_rewards) / len(T_rewards), sum(T_Qs) / len(T_Qs)
+  # 验证模式不进行保存模型
+  # 如果是训练模式，则保存最好的平奖励的模型以及对应的奖励趋势还有绘制图形
   if not evaluate:
     # Save model parameters if improved
     if avg_reward > metrics['best_avg_reward']:
